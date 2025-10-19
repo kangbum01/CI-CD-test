@@ -12,7 +12,7 @@ spec:
   serviceAccountName: jenkins
   containers:
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:latest
+    image: gcr.io/kaniko-project/executor:debug
     command: ['sh', '-c', 'cat']   # 컨테이너를 대기상태로 유지해 sh 스텝 사용
     tty: true
     volumeMounts:
