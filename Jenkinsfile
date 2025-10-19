@@ -13,11 +13,11 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
-    command: ['sh', '-c', 'cat']   # 컨테이너를 대기상태로 유지해 sh 스텝 사용
+    command: ['sh','-c','cat']   # 컨테이너 대기 (sh 스텝용)
     tty: true
     volumeMounts:
     - name: kaniko-docker-config
-      mountPath: /kaniko/.docker   # 여기에 auth.json 생성
+      mountPath: /kaniko/.docker
   - name: kubectl
     image: alpine:3.20
     command: ['sh','-c','sleep infinity']
@@ -32,10 +32,10 @@ spec:
   // ===== 환경 변수(레포/네임스페이스/태그) =====
   environment {
     REGISTRY   = "index.docker.io"
-    DOCKER_NS  = "alvin852"    // 예: kangbum01  ← 반드시 네 계정으로!
-    IMAGE_NAME = "ci-cd-test"          // 생성될 리포지토리 이름
-    IMAGE_TAG  = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}" // 브랜치-빌드번호
-    CONTEXT    = "."                    // 빌드 컨텍스트(레포 루트)
+    DOCKER_NS  = "alvin852"                 // ← 너의 Docker Hub 계정
+    IMAGE_NAME = "ci-cd-test"
+    IMAGE_TAG  = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+    CONTEXT    = "."
     DOCKERFILE = "Dockerfile"
   }
 
@@ -44,7 +44,6 @@ spec:
     stage('Docker auth.json 생성') {
       steps {
         container('kaniko') {
-          // Jenkins 자격증명(dockerhub-creds)을 환경변수로 바인딩
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
                                             usernameVariable: 'DH_USER',
                                             passwordVariable: 'DH_PASS')]) {
@@ -53,11 +52,7 @@ spec:
               mkdir -p /kaniko/.docker
               AUTH=$(printf "%s:%s" "$DH_USER" "$DH_PASS" | base64 -w0)
               cat > /kaniko/.docker/config.json <<EOF
-              {
-                "auths": {
-                  "https://index.docker.io/v1/": { "auth": "${AUTH}" }
-                }
-              }
+              {"auths":{"https://index.docker.io/v1/":{"auth":"${AUTH}"}}}
 EOF
               echo "[INFO] wrote /kaniko/.docker/config.json"
             '''
@@ -76,6 +71,33 @@ EOF
               --dockerfile "${DOCKERFILE}" \
               --destination ${REGISTRY}/${DOCKER_NS}/${IMAGE_NAME}:${IMAGE_TAG} \
               --destination ${REGISTRY}/${DOCKER_NS}/${IMAGE_NAME}:latest
+          '''
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        container('kubectl') {
+          sh '''
+            set -eux
+            # kubectl 설치
+            apk add --no-cache curl ca-certificates
+            KVER=v1.34.1
+            curl -L -o /usr/local/bin/kubectl https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl
+            chmod +x /usr/local/bin/kubectl
+
+            # 매니페스트 적용(생성/갱신)
+            kubectl -n ci apply -f k8s/deploy.yaml
+
+            # 이번 빌드의 이미지 태그로 롤링 업데이트
+            kubectl -n ci set image deploy/myapp myapp=index.docker.io/alvin852/ci-cd-test:${IMAGE_TAG}
+
+            # 롤아웃 완료 대기
+            kubectl -n ci rollout status deploy/myapp --timeout=120s
+
+            # 확인
+            kubectl -n ci get pods -l app=myapp -o wide
           '''
         }
       }
