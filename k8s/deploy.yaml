@@ -16,9 +16,9 @@ spec:
       containers:
       - name: myapp
         image: index.docker.io/alvin852/ci-cd-test:latest   # ← DOCKER_NS에 맞춰 수정
-        ports: [{ containerPort: 8080 }]
+        ports: [{ containerPort: 80 }]
         readinessProbe:
-          httpGet: { path: "/", port: 8080 }
+          httpGet: { path: "/", port: 80 }
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
@@ -33,6 +33,6 @@ metadata:
   namespace: ci
 spec:
   selector: { app: myapp }
-  ports: [{ port: 80, targetPort: 8080, protocol: TCP }]
+  ports: [{ port: 80, targetPort: 80, protocol: TCP }]
   type: ClusterIP
 
