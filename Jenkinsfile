@@ -35,8 +35,6 @@ spec:
     DOCKERFILE = "Dockerfile"
   }
 
-  options { ansiColor('xterm') }
-
   stages {
 
     stage('Docker auth.json 생성') {
