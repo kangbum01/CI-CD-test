@@ -1,0 +1,38 @@
+---
+# k8s/deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: ci
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: myapp }
+  template:
+    metadata:
+      labels: { app: myapp }
+    spec:
+      containers:
+      - name: myapp
+        image: index.docker.io/alvin852/ci-cd-test:latest   # ← DOCKER_NS에 맞춰 수정
+        ports: [{ containerPort: 8080 }]
+        readinessProbe:
+          httpGet: { path: "/", port: 8080 }
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: { path: "/", port: 8080 }
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+  namespace: ci
+spec:
+  selector: { app: myapp }
+  ports: [{ port: 80, targetPort: 8080, protocol: TCP }]
+  type: ClusterIP
+
