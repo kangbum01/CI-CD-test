@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: ci
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: jenkins }
+  template:
+    metadata:
+      labels: { app: jenkins }
+    spec:
+      # hostPath PV 만든 그 노드로 고정 (예: master)
+      nodeSelector:
+        kubernetes.io/hostname: master   # ← 여기를 네 환경의 노드명으로 교체
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "node-role.kubernetes.io/master"   # 구버전 호환용(있으면)
+        operator: "Exists"
+        effect: "NoSchedule"
+      serviceAccountName: jenkins
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: jenkins
+        image: jenkins/jenkins:lts-jdk17
+        ports:
+          - { name: http,  containerPort: 8080 }
+          - { name: agent, containerPort: 50000 }
+        volumeMounts:
+          - { name: jhome, mountPath: /var/jenkins_home }
+        resources:
+          requests: { cpu: "500m", memory: "1Gi" }
+          limits:   { cpu: "2",    memory: "4Gi" }
+      volumes:
+        - name: jhome
+          persistentVolumeClaim:
+            claimName: jenkins-home
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: ci
+spec:
+  type: NodePort
+  selector: { app: jenkins }
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    nodePort: 30080      # 사용 중이면 다른 값(30000~32767)로 바꿔
+  - name: agent
+    port: 50000
+    targetPort: 50000
+

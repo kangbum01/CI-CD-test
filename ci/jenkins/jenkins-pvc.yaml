@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jenkins-pv
+spec:
+  capacity:
+    storage: 25Gi
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/jenkins-home
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-home
+  namespace: ci
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 25Gi
+  volumeName: jenkins-pv
+
