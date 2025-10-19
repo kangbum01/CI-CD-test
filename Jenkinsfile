@@ -18,6 +18,10 @@ spec:
     volumeMounts:
     - name: kaniko-docker-config
       mountPath: /kaniko/.docker   # 여기에 auth.json 생성
+  - name: kubectl
+    image: alpine:3.20
+    command: ['sh','-c','sleep infinity']
+    tty: true
   volumes:
   - name: kaniko-docker-config
     emptyDir: {}
