@@ -28,7 +28,7 @@ spec:
   // ===== 환경 변수(레포/네임스페이스/태그) =====
   environment {
     REGISTRY   = "index.docker.io"
-    DOCKER_NS  = "<도커허브계정>"      // 예: kangbum01  ← 반드시 네 계정으로!
+    DOCKER_NS  = "kangbum01"    // 예: kangbum01  ← 반드시 네 계정으로!
     IMAGE_NAME = "ci-cd-test"          // 생성될 리포지토리 이름
     IMAGE_TAG  = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}" // 브랜치-빌드번호
     CONTEXT    = "."                    // 빌드 컨텍스트(레포 루트)
